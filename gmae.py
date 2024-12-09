@@ -62,13 +62,14 @@ class GhostStep(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=(x_position, y_position))
 
 class Arrow(pygame.sprite.Sprite):
-    def __init__(self, direction, x_position, start_y, time_appearance, foot=None):
+    def __init__(self, direction, x_position, start_y, time_appearance, foot=None, time_end=None):
         super().__init__()
         self.direction = direction
         self.image = arrow_images[self.direction].copy()  # Copy the base arrow image
         self.rect = self.image.get_rect(center=(x_position, start_y))
         self.speed = scroll_speed
         self.time_appearance = time_appearance
+        self.time_end = time_end  # If present, this is the "hold" time
         self.killed = False
         self.foot = foot  # Optional foot indicator ("L" or "R")
 
@@ -78,7 +79,7 @@ class Arrow(pygame.sprite.Sprite):
 
     def _overlay_foot_text(self):
         """Render the foot ('L' or 'R') onto the arrow image."""
-        font = pygame.font.SysFont('Arial', 80, bold=True)  # Slightly larger font size
+        font = pygame.font.SysFont('Arial', 56, bold=True)  # Slightly larger font size
         text_color = (255, 0, 0)  # Red color for the text
         text_surface = font.render(self.foot, True, text_color)
 
@@ -92,16 +93,36 @@ class Arrow(pygame.sprite.Sprite):
         if self.killed:
             return
 
+        # Only move the arrow if the current time is greater than the appearance time
         if current_time >= self.time_appearance:
             if game_mode == "standard":
+                # Arrow moves up in standard mode (rect.y decreases)
                 self.rect.y -= self.speed * time_factor
             elif game_mode == "reverse":
+                # Arrow moves down in reverse mode (rect.y increases)
                 self.rect.y += self.speed * time_factor
 
-        # Kill the arrow if it moves off-screen
-        if self.rect.y > SCREEN_HEIGHT - 175 or self.rect.y < 0:
+        # Kill the arrow if it moves off-screen in standard mode or reverse mode
+        # This can be replaced with any logic you want for removing the arrow, for example:
+        if (game_mode == "standard" and self.rect.y <= 0) or (game_mode == "reverse" and self.rect.y >= SCREEN_HEIGHT - 175):
             self.kill()
 
+    def draw_hold_indicator(self, surface):
+        """Draw a hold indicator (rectangle) spanning from time_appearance to time_end."""
+        if self.time_end:
+            # Calculate the y position of the arrow at time_end
+            total_time = self.time_end - self.time_appearance
+            if game_mode == "standard":
+                # Arrow moves up in standard mode
+                y_end_position = self.rect.y - total_time * self.speed * time_factor
+            elif game_mode == "reverse":
+                # Arrow moves down in reverse mode, but the hold rectangle should go upwards
+                y_end_position = self.rect.y - total_time * self.speed * time_factor  # The rectangle extends upwards
+
+            # Draw the hold rectangle from time_appearance to time_end
+            hold_rect = pygame.Rect(self.rect.x - 75, self.rect.y, 150, y_end_position - self.rect.y)  # Adjust size and position
+            pygame.draw.rect(surface, (255, 255, 0), hold_rect, 3)  # Yellow rectangle with border
+            pygame.draw.rect(surface, (255, 255, 0, 50), hold_rect)  # Semi-transparent fill for the hold area
 
 # Parse input file
 def parse_input_file(filename):
@@ -111,6 +132,7 @@ def parse_input_file(filename):
     except (json.JSONDecodeError, FileNotFoundError) as e:
         print(f"Error loading input file: {e}")
         sys.exit()
+
 def main_menu():
     global scroll_speed, game_mode, arrow_file, game_started, time_factor
 
@@ -203,7 +225,6 @@ def main_menu():
         pygame.display.flip()
         clock.tick(30)
 
-
 def game_loop(input_data):
     global game_started, start_time, time_factor
 
@@ -224,14 +245,24 @@ def game_loop(input_data):
     if game_started:
         start_time = pygame.time.get_ticks()
 
-    # Prepare arrows without scaling their appearance times
+    # Loop over the input data and add arrows based on time and time_end
     for arrow in input_data:
         x_position = arrow_positions[arrow['direction']]
         time_appearance = arrow['time']
-        foot = arrow.get('foot')  # Use .get() to avoid KeyError if 'foot' is missing
-        new_arrow = Arrow(arrow['direction'], x_position, start_y, time_appearance, foot)
-        arrows_to_create.append(new_arrow)
+        time_end = arrow.get('time_end')  # Check if time_end is present
+        foot = arrow.get('foot')  # Optional foot indicator
 
+        # Add arrows every 10ms starting from time_appearance until time_end
+        if time_end:
+            current_time = time_appearance
+            while current_time <= time_end:
+                new_arrow = Arrow(arrow['direction'], x_position, start_y, current_time, foot, time_end)
+                arrows_to_create.append(new_arrow)
+                current_time += 17  # Add a new arrow every 10 milliseconds
+        else:
+            # If no time_end, just create a single arrow at time_appearance
+            new_arrow = Arrow(arrow['direction'], x_position, start_y, time_appearance, foot)
+            arrows_to_create.append(new_arrow)
 
     created_arrows = set()
 
@@ -265,6 +296,10 @@ def game_loop(input_data):
         # Draw ghost steps and arrows
         ghost_steps.draw(screen)
         arrows_group.draw(screen)
+
+        # Draw hold indicators for each arrow (if any)
+        for arrow in arrows_group:
+            arrow.draw_hold_indicator(screen)
 
         # Refresh display
         pygame.display.flip()
