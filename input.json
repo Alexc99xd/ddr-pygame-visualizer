@@ -1,6 +1,6 @@
 [
-    {"time": 1000, "direction": "up"},
-    {"time": 2000, "direction": "down"},
-    {"time": 3000, "direction": "left"},
-    {"time": 4000, "direction": "right"}
+    {"time": 1000, "time_end":2000, "direction": "up", "foot": "L"},
+    {"time": 2000, "direction": "down","foot": "R"},
+    {"time": 3000, "direction": "left","foot": "L"},
+    {"time": 4000, "direction": "right","foot": "R"}
 ]
