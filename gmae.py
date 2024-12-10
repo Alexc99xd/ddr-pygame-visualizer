@@ -2,17 +2,15 @@ import pygame
 import sys
 import json
 
-# Initialize Pygame
 pygame.init()
 
-# Screen dimensions and setup
 SCREEN_WIDTH = 1000
 SCREEN_HEIGHT = 1050
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption('DDR-like Game')
 # Slider variables
-slider_rect = pygame.Rect(300, 300, 400, 10)  # Slider bar
-handle_rect = pygame.Rect(300, 290, 20, 30)  # Slider handle
+slider_rect = pygame.Rect(300, 300, 400, 10)  
+handle_rect = pygame.Rect(300, 290, 20, 30) 
 slider_min = 0.1  # Minimum speed
 slider_max = 1.0  # Maximum speed
 slider_value = 1.0  # Default speed
@@ -23,7 +21,6 @@ BLACK = (0, 0, 0)
 GRAY = (100, 100, 100)
 BUTTON_COLOR = (0, 255, 0)
 
-# Load and resize images (arrows to 150x150)
 arrow_images = {
     'left': pygame.image.load('left_arrow.png').convert_alpha(),
     'down': pygame.image.load('down_arrow.png').convert_alpha(),
@@ -33,23 +30,17 @@ arrow_images = {
 for direction, image in arrow_images.items():
     arrow_images[direction] = pygame.transform.scale(image, (150, 150))
 
-# Game settings (default values)
+
 scroll_speed = 12
 game_mode = "standard"  # or "reverse"
 arrow_file = "input.json"
-
-# Arrow positions
 arrow_positions = {
     'left': 250,
     'down': 400,
     'up': 550,
     'right': 700
 }
-
-# Ghost steps (target zone)
 ghost_steps = pygame.sprite.Group()
-
-# Global game start flag and start time
 game_started = False
 start_time = None
 
@@ -65,64 +56,51 @@ class Arrow(pygame.sprite.Sprite):
     def __init__(self, direction, x_position, start_y, time_appearance, foot=None, time_end=None):
         super().__init__()
         self.direction = direction
-        self.image = arrow_images[self.direction].copy()  # Copy the base arrow image
+        self.image = arrow_images[self.direction].copy() 
         self.rect = self.image.get_rect(center=(x_position, start_y))
         self.speed = scroll_speed
         self.time_appearance = time_appearance
-        self.time_end = time_end  # If present, this is the "hold" time
+        self.time_end = time_end  
         self.killed = False
-        self.foot = foot  # Optional foot indicator ("L" or "R")
-
-        # Overlay the foot text if provided
+        self.foot = foot
         if self.foot:
             self._overlay_foot_text()
 
     def _overlay_foot_text(self):
         """Render the foot ('L' or 'R') onto the arrow image."""
-        font = pygame.font.SysFont('Arial', 85, bold=True)  # Slightly larger font size
-        text_color = (255, 0, 0)  # Red color for the text
+        font = pygame.font.SysFont('Arial', 85, bold=True) #change font size here
+        text_color = (255, 0, 0) 
         text_surface = font.render(self.foot, True, text_color)
-
-        # Position the text at the center of the arrow image
         text_rect = text_surface.get_rect(center=self.image.get_rect().center)
-
-        # Blit the text onto the arrow image
         self.image.blit(text_surface, text_rect)
 
     def update(self, current_time):
         if self.killed:
             return
 
-        # Only move the arrow if the current time is greater than the appearance time
         if current_time >= self.time_appearance:
             if game_mode == "standard":
-                # Arrow moves up in standard mode (rect.y decreases)
                 self.rect.y -= self.speed * time_factor
             elif game_mode == "reverse":
-                # Arrow moves down in reverse mode (rect.y increases)
                 self.rect.y += self.speed * time_factor
 
         # Kill the arrow if it moves off-screen in standard mode or reverse mode
-        # This can be replaced with any logic you want for removing the arrow, for example:
         if (game_mode == "standard" and self.rect.y <= 0) or (game_mode == "reverse" and self.rect.y >= SCREEN_HEIGHT - 175):
             self.kill()
 
     def draw_hold_indicator(self, surface):
-        """Draw a hold indicator (rectangle) spanning from time_appearance to time_end."""
+        #Probably deleting because i am not using this
         if self.time_end:
-            # Calculate the y position of the arrow at time_end
             total_time = self.time_end - self.time_appearance
             if game_mode == "standard":
-                # Arrow moves up in standard mode
                 y_end_position = self.rect.y - total_time * self.speed * time_factor
             elif game_mode == "reverse":
-                # Arrow moves down in reverse mode, but the hold rectangle should go upwards
-                y_end_position = self.rect.y - total_time * self.speed * time_factor  # The rectangle extends upwards
+                y_end_position = self.rect.y - total_time * self.speed * time_factor
 
             # Draw the hold rectangle from time_appearance to time_end
-            hold_rect = pygame.Rect(self.rect.x - 75, self.rect.y, 150, y_end_position - self.rect.y)  # Adjust size and position
-            pygame.draw.rect(surface, (255, 255, 0), hold_rect, 3)  # Yellow rectangle with border
-            pygame.draw.rect(surface, (255, 255, 0, 50), hold_rect)  # Semi-transparent fill for the hold area
+            hold_rect = pygame.Rect(self.rect.x - 75, self.rect.y, 150, y_end_position - self.rect.y)
+            pygame.draw.rect(surface, (255, 255, 0), hold_rect, 3) 
+            pygame.draw.rect(surface, (255, 255, 0, 50), hold_rect)  
 
 # Parse input file
 def parse_input_file(filename):
@@ -135,21 +113,18 @@ def parse_input_file(filename):
 
 def main_menu():
     global scroll_speed, game_mode, arrow_file, game_started, time_factor
-
     font = pygame.font.SysFont('Arial', 32)
     clock = pygame.time.Clock()
     input_active = False
     input_text = arrow_file
     start_button = pygame.Rect(SCREEN_WIDTH // 2 - 100, SCREEN_HEIGHT // 2 + 100, 200, 50)
-
-    # Slider variables
     slider_rect = pygame.Rect(300, 300, 400, 10)
-    handle_rect = pygame.Rect(300 + slider_rect.width - 20, 290, 20, 30)  # Set handle to the far right for 1.0x
-    time_factors = [0.1 * i for i in range(1, 11)]  # 0.1 to 1.0
+    handle_rect = pygame.Rect(300 + slider_rect.width - 20, 290, 20, 30) 
+    time_factors = [0.1 * i for i in range(1, 11)]  # 0.1 to 1.0 ... change later?
     slider_width = slider_rect.width
     num_factors = len(time_factors)
     dragging = False
-    time_factor = 1.0  # Default to 1.0x speed
+    time_factor = 1.0  
 
     def calculate_time_factor(handle_x):
         index = round((handle_x - slider_rect.left) / slider_width * (num_factors - 1))
@@ -167,14 +142,14 @@ def main_menu():
                 if input_box.collidepoint(event.pos):
                     input_active = True
                 else:
-                    input_active = False  # Clicking outside deactivates the input box
+                    input_active = False 
 
                 if slider_rect.collidepoint(event.pos) or handle_rect.collidepoint(event.pos):
                     dragging = True
 
                 if start_button.collidepoint(event.pos):
                     game_started = True
-                    time_factor = calculate_time_factor(handle_rect.centerx)  # Set time_factor from slider
+                    time_factor = calculate_time_factor(handle_rect.centerx) 
                     return
 
             if event.type == pygame.MOUSEBUTTONUP:
@@ -185,17 +160,17 @@ def main_menu():
                                           min(event.pos[0], slider_rect.right))
                 time_factor = calculate_time_factor(handle_rect.centerx)
 
-            # Keyboard events
+            # this the input field
             if event.type == pygame.KEYDOWN:
-                if input_active:  # Only handle input for the active text box
+                if input_active: 
                     if event.key == pygame.K_RETURN:
                         arrow_file = input_text
-                        input_active = False  # Exit input mode on Enter
+                        input_active = False  
                     elif event.key == pygame.K_BACKSPACE:
                         input_text = input_text[:-1]
                     else:
                         input_text += event.unicode
-                else:  # Allow other settings to change if input box is inactive
+                else:  
                     if event.key == pygame.K_UP:
                         scroll_speed += 1
                     elif event.key == pygame.K_DOWN:
@@ -205,7 +180,6 @@ def main_menu():
                     elif event.key == pygame.K_s:
                         game_mode = "standard"
 
-        # Draw UI
         screen.fill(BLACK)
         menu_title = font.render("DDR Game Settings", True, WHITE)
         screen.blit(menu_title, (SCREEN_WIDTH // 2 - menu_title.get_width() // 2, 50))
@@ -214,26 +188,25 @@ def main_menu():
         file_label = font.render("Input JSON File:", True, WHITE)
         screen.blit(file_label, (50, 150))
         input_box = pygame.Rect(300, 140, 400, 40)
-        pygame.draw.rect(screen, WHITE, input_box, 2 if input_active else 1)  # Highlight box if active
+        pygame.draw.rect(screen, WHITE, input_box, 2 if input_active else 1) 
         input_surface = font.render(input_text, True, WHITE)
         screen.blit(input_surface, (input_box.x + 10, input_box.y + 5))
 
-        # Scroll speed
-        speed_label = font.render(f"Scroll Speed: {scroll_speed}", True, WHITE)
+        # Scroll speed which is just based on how much the arrow moves... oh well
+        speed_label = font.render(f"Scroll Speed: {scroll_speed} Press Up/down arrow to change", True, WHITE)
         screen.blit(speed_label, (50, 250))
 
         # Game mode
         mode_label = font.render(f"Mode: {game_mode} (Press R for Reverse, S for Standard)", True, WHITE)
         screen.blit(mode_label, (50, 350))
 
-        # Slider
+        # mario 64 Slider
         pygame.draw.rect(screen, WHITE, slider_rect)
         pygame.draw.rect(screen, BUTTON_COLOR, handle_rect)
         slider_value_label = font.render(f"Game Speed: {time_factor:.1f}x", True, WHITE)
         screen.blit(slider_value_label, (slider_rect.x + slider_rect.width // 2 - slider_value_label.get_width() // 2,
                                          slider_rect.y - 40))
 
-        # Start button
         pygame.draw.rect(screen, BUTTON_COLOR, start_button)
         start_text = font.render("Start Game", True, BLACK)
         screen.blit(start_text, (start_button.x + start_button.width // 2 - start_text.get_width() // 2,
@@ -259,7 +232,6 @@ def game_loop(input_data):
     start_y = 100 if game_mode == "reverse" else SCREEN_HEIGHT
     arrows_to_create = []
 
-    # Initialize the game start time
     if game_started:
         start_time = pygame.time.get_ticks()
 
@@ -267,18 +239,18 @@ def game_loop(input_data):
     for arrow in input_data:
         x_position = arrow_positions[arrow['direction']]
         time_appearance = arrow['time']
-        time_end = arrow.get('time_end')  # Check if time_end is present
-        foot = arrow.get('foot')  # Optional foot indicator
+        time_end = arrow.get('time_end')  
+        foot = arrow.get('foot') 
 
-        # Add arrows every 10ms starting from time_appearance until time_end
+        # yoooo a hold
         if time_end:
             current_time = time_appearance
             while current_time <= time_end:
                 new_arrow = Arrow(arrow['direction'], x_position, start_y, current_time, foot, time_end)
                 arrows_to_create.append(new_arrow)
-                current_time += 17  # Add a new arrow every 10 milliseconds
+                current_time += 17  # Add a new arrow every 17 ms to "mimic" a hold LOL
         else:
-            # If no time_end, just create a single arrow at time_appearance
+            # If no time_end, then it's a regular arrow not a hold
             new_arrow = Arrow(arrow['direction'], x_position, start_y, time_appearance, foot)
             arrows_to_create.append(new_arrow)
 
@@ -293,39 +265,36 @@ def game_loop(input_data):
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_q:  # Key to go back to the main menu
-                    running = False  # Exit the game loop
-                    game_started = False  # Reset game state
+                if event.key == pygame.K_q:  
+                    running = False 
+                    game_started = False  
                     return
 
-        # Only process game logic if the game has started
+
         if game_started:
             current_time = pygame.time.get_ticks() - start_time
 
-            # Create new arrows based on their appearance times
             for arrow in arrows_to_create:
                 if current_time >= arrow.time_appearance and arrow not in created_arrows:
                     arrows_group.add(arrow)
                     created_arrows.add(arrow)
 
-            # Update arrows with scaled movement
+            # Update arrows with scaled time frame like 0.5x
             arrows_group.update(current_time * time_factor)
 
-        # Draw ghost steps and arrows
+        #Draw ghost steps and arrows
         ghost_steps.draw(screen)
         arrows_group.draw(screen)
 
-        # Draw hold indicators for each arrow (if any)
         for arrow in arrows_group:
             arrow.draw_hold_indicator(screen)
 
-        # Refresh display
         pygame.display.flip()
-
-        # Maintain constant frame rate
+        # 60fps
         clock.tick(60)
 
 
+# da game
 
 while True:
     main_menu()
