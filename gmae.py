@@ -79,7 +79,7 @@ class Arrow(pygame.sprite.Sprite):
 
     def _overlay_foot_text(self):
         """Render the foot ('L' or 'R') onto the arrow image."""
-        font = pygame.font.SysFont('Arial', 56, bold=True)  # Slightly larger font size
+        font = pygame.font.SysFont('Arial', 85, bold=True)  # Slightly larger font size
         text_color = (255, 0, 0)  # Red color for the text
         text_surface = font.render(self.foot, True, text_color)
 
@@ -162,61 +162,78 @@ def main_menu():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            if event.type == pygame.KEYDOWN:
-                if input_active:
-                    if event.key == pygame.K_RETURN:
-                        arrow_file = input_text
-                        return
-                    elif event.key == pygame.K_BACKSPACE:
-                        input_text = input_text[:-1]
-                    else:
-                        input_text += event.unicode
-                if event.key == pygame.K_UP:
-                    scroll_speed += 1
-                elif event.key == pygame.K_DOWN:
-                    scroll_speed = max(1, scroll_speed - 1)
-                elif event.key == pygame.K_r:
-                    game_mode = "reverse"
-                elif event.key == pygame.K_s:
-                    game_mode = "standard"
+
             if event.type == pygame.MOUSEBUTTONDOWN:
+                if input_box.collidepoint(event.pos):
+                    input_active = True
+                else:
+                    input_active = False  # Clicking outside deactivates the input box
+
                 if slider_rect.collidepoint(event.pos) or handle_rect.collidepoint(event.pos):
                     dragging = True
+
                 if start_button.collidepoint(event.pos):
                     game_started = True
                     time_factor = calculate_time_factor(handle_rect.centerx)  # Set time_factor from slider
                     return
+
             if event.type == pygame.MOUSEBUTTONUP:
                 dragging = False
+
             if event.type == pygame.MOUSEMOTION and dragging:
                 handle_rect.centerx = max(slider_rect.left,
                                           min(event.pos[0], slider_rect.right))
                 time_factor = calculate_time_factor(handle_rect.centerx)
+
+            # Keyboard events
+            if event.type == pygame.KEYDOWN:
+                if input_active:  # Only handle input for the active text box
+                    if event.key == pygame.K_RETURN:
+                        arrow_file = input_text
+                        input_active = False  # Exit input mode on Enter
+                    elif event.key == pygame.K_BACKSPACE:
+                        input_text = input_text[:-1]
+                    else:
+                        input_text += event.unicode
+                else:  # Allow other settings to change if input box is inactive
+                    if event.key == pygame.K_UP:
+                        scroll_speed += 1
+                    elif event.key == pygame.K_DOWN:
+                        scroll_speed = max(1, scroll_speed - 1)
+                    elif event.key == pygame.K_r:
+                        game_mode = "reverse"
+                    elif event.key == pygame.K_s:
+                        game_mode = "standard"
 
         # Draw UI
         screen.fill(BLACK)
         menu_title = font.render("DDR Game Settings", True, WHITE)
         screen.blit(menu_title, (SCREEN_WIDTH // 2 - menu_title.get_width() // 2, 50))
 
+        # Input box
         file_label = font.render("Input JSON File:", True, WHITE)
         screen.blit(file_label, (50, 150))
         input_box = pygame.Rect(300, 140, 400, 40)
-        pygame.draw.rect(screen, WHITE, input_box, 2)
+        pygame.draw.rect(screen, WHITE, input_box, 2 if input_active else 1)  # Highlight box if active
         input_surface = font.render(input_text, True, WHITE)
         screen.blit(input_surface, (input_box.x + 10, input_box.y + 5))
 
+        # Scroll speed
         speed_label = font.render(f"Scroll Speed: {scroll_speed}", True, WHITE)
         screen.blit(speed_label, (50, 250))
 
+        # Game mode
         mode_label = font.render(f"Mode: {game_mode} (Press R for Reverse, S for Standard)", True, WHITE)
         screen.blit(mode_label, (50, 350))
 
+        # Slider
         pygame.draw.rect(screen, WHITE, slider_rect)
         pygame.draw.rect(screen, BUTTON_COLOR, handle_rect)
         slider_value_label = font.render(f"Game Speed: {time_factor:.1f}x", True, WHITE)
         screen.blit(slider_value_label, (slider_rect.x + slider_rect.width // 2 - slider_value_label.get_width() // 2,
                                          slider_rect.y - 40))
 
+        # Start button
         pygame.draw.rect(screen, BUTTON_COLOR, start_button)
         start_text = font.render("Start Game", True, BLACK)
         screen.blit(start_text, (start_button.x + start_button.width // 2 - start_text.get_width() // 2,
@@ -224,6 +241,7 @@ def main_menu():
 
         pygame.display.flip()
         clock.tick(30)
+
 
 def game_loop(input_data):
     global game_started, start_time, time_factor
